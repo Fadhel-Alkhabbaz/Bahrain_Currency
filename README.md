@@ -7,7 +7,7 @@ An end-to-end Deep Learning & Computer Vision web application built with **Strea
 ## 🌐 Live Demo
 
 You can try the live web application on Streamlit Cloud:  
-👉 **![Launch Bahraini Currency App]([https://your-app-name.streamlit.app](https://bahrain-currency.streamlit.app/))** 
+👉 ** [Launch Bahraini Currency App]([https://your-app-name.streamlit.app](https://bahrain-currency.streamlit.app/))** 
 
 ---
 
