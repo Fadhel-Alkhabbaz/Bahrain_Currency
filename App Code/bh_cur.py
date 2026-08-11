@@ -1,7 +1,6 @@
-import textwrap
 from pathlib import Path
+import textwrap
 
-import keras
 import numpy as np
 from PIL import Image, ImageOps
 import pandas as pd
@@ -72,38 +71,75 @@ if "detected_currency" not in st.session_state:
 
 
 # --------------------------------------------------
-# 4. Load Model
+# 4. Keras Deserialization Fix & Model Loading
 # --------------------------------------------------
+
+def fix_keras_deserialization():
+    
+    modules_to_patch = []
+    try:
+        import keras
+        modules_to_patch.append(keras)
+    except ImportError:
+        pass
+
+    try:
+        import tensorflow.keras as tf_keras
+        modules_to_patch.append(tf_keras)
+    except ImportError:
+        pass
+
+    for mod in modules_to_patch:
+        if hasattr(mod, "layers") and hasattr(mod.layers, "Layer"):
+            base_layer = mod.layers.Layer
+            for attr_name in dir(mod.layers):
+                try:
+                    attr = getattr(mod.layers, attr_name)
+                    if isinstance(attr, type) and issubclass(attr, base_layer):
+                        old_init = attr.__init__
+                        if getattr(old_init, "_is_patched", False):
+                            continue
+
+                        def make_patched_init(orig_init):
+                            def patched_init(self, *args, **kwargs):
+                                kwargs.pop("quantization_config", None)
+                                kwargs.pop("build_config", None)
+                                orig_init(self, *args, **kwargs)
+                            patched_init._is_patched = True
+                            return patched_init
+
+                        attr.__init__ = make_patched_init(old_init)
+                except Exception:
+                    pass
+
 
 MODEL_PATH = (
     Path(__file__).resolve().parent
+    
     / "currency_model4.keras"
 )
 
 
 def load_my_model():
-
     if not MODEL_PATH.exists():
-
-        st.error(
-            f"Model file not found at:\n{MODEL_PATH}"
-        )
-
+        st.error(f"Model file not found at:\n{MODEL_PATH}")
         return None
+
+    fix_keras_deserialization()
 
     try:
-
-        return keras.models.load_model(
-            str(MODEL_PATH)
-        )
-
-    except Exception as e:
-
-        st.error(
-            f"Error loading {MODEL_PATH.name}: {e}"
-        )
-
-        return None
+        import keras
+        return keras.models.load_model(str(MODEL_PATH), compile=False)
+    except Exception as e1:
+        try:
+            import tensorflow as tf
+            return tf.keras.models.load_model(str(MODEL_PATH), compile=False)
+        except Exception as e2:
+            st.error(
+                f"Error loading {MODEL_PATH.name}:\n"
+                f"Keras error: {e1}\nTF error: {e2}"
+            )
+            return None
 
 
 model = load_my_model()
@@ -192,7 +228,7 @@ with st.sidebar:
 
 st.title("Bahraini Currency Identifier")
 
-st.caption("Powered by Keras and Streamlit")
+st.caption("Powered by TensorFlow / Keras and Streamlit")
 
 st.write("---")
 
@@ -221,7 +257,6 @@ with col1:
 
     image = None
 
-
     if input_type == "Upload Image":
 
         uploaded_file = st.file_uploader(
@@ -235,7 +270,6 @@ with col1:
                 uploaded_file
             )
 
-
     else:
 
         camera_file = st.camera_input(
@@ -247,7 +281,6 @@ with col1:
             image = Image.open(
                 camera_file
             )
-
 
     if image is not None:
 
@@ -307,7 +340,6 @@ with col2:
             img_processed,
             axis=0
         )
-
 
         if st.button(
             "🔍 Identify Currency"
