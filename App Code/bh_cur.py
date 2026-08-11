@@ -1,10 +1,11 @@
-from pathlib import Path
 import textwrap
+from pathlib import Path
+
+import keras
 import numpy as np
 from PIL import Image, ImageOps
 import pandas as pd
 import streamlit as st
-import tensorflow as tf
 
 
 # --------------------------------------------------
@@ -13,7 +14,7 @@ import tensorflow as tf
 
 st.set_page_config(
     page_title="Bahraini Currency Recognition",
-    page_icon="💵",
+    page_icon="🪙",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -92,7 +93,7 @@ def load_my_model():
 
     try:
 
-        return tf.keras.models.load_model(
+        return keras.models.load_model(
             str(MODEL_PATH)
         )
 
@@ -153,7 +154,7 @@ CURRENCY_CLASSES = {
 
 with st.sidebar:
 
-    st.title("💰 Currency Calculator")
+    st.title("🧮 Currency Calculator")
 
     st.info(
         "Upload or capture an image of Bahraini currency. "
@@ -191,7 +192,7 @@ with st.sidebar:
 
 st.title("Bahraini Currency Identifier")
 
-st.caption("Powered by TensorFlow and Streamlit")
+st.caption("Powered by Keras and Streamlit")
 
 st.write("---")
 
@@ -309,7 +310,7 @@ with col2:
 
 
         if st.button(
-            "🚀 Identify Currency"
+            "🔍 Identify Currency"
         ):
 
             if model is not None:
@@ -361,15 +362,19 @@ with col2:
                     "Model could not be loaded."
                 )
 
+
 # --------------------------------------------------
 # 10. Show Prediction
 # --------------------------------------------------
 
 if "last_detected" in st.session_state:
 
-    last = st.session_state["last_detected"]
+    last = st.session_state[
+        "last_detected"
+    ]
 
-    html_card = textwrap.dedent(f"""
+    html_card = textwrap.dedent(
+        f"""
         <div class="metric-card">
             <h4 style="color:#64748b; margin:0;">
                 Detected Currency
@@ -381,20 +386,74 @@ if "last_detected" in st.session_state:
                 Value: <strong>{last["Value"]:.3f} BHD</strong>
             </p>
         </div>
-    """)
+        """
+    )
 
-    st.markdown(html_card, unsafe_allow_html=True)
+    st.markdown(
+        html_card,
+        unsafe_allow_html=True
+    )
 
-    st.write("**Confidence Score:**")
-    st.progress(last["Confidence"] / 100)
-    st.caption(f'Model Confidence: **{last["Confidence"]:.2f}%**')
+    st.write(
+        "**Confidence Score:**"
+    )
+
+    st.progress(
+        last["Confidence"] / 100
+    )
+
+    st.caption(
+        f'Model Confidence: '
+        f'**{last["Confidence"]:.2f}%**'
+    )
 
     st.write("---")
 
-    if st.button("➕ Add to Total"):
-        st.session_state.detected_currency.append({
-            "Currency": last["Currency"],
-            "Value": last["Value"]
-        })
-        st.success(f'Added {last["Currency"]} ({last["Value"]:.3f} BHD)')
+    if st.button(
+        "➕ Add to Total"
+    ):
+
+        st.session_state.detected_currency.append(
+            {
+                "Currency":
+                    last["Currency"],
+
+                "Value":
+                    last["Value"]
+            }
+        )
+
+        st.success(
+            f'Added {last["Currency"]} '
+            f'({last["Value"]:.3f} BHD)'
+        )
+
         st.rerun()
+
+
+# --------------------------------------------------
+# 11. History
+# --------------------------------------------------
+
+st.write("---")
+
+st.subheader(
+    "📜 Currency History"
+)
+
+if st.session_state.detected_currency:
+
+    df_currency = pd.DataFrame(
+        st.session_state.detected_currency
+    )
+
+    st.dataframe(
+        df_currency,
+        use_container_width=True
+    )
+
+else:
+
+    st.info(
+        "No currency added yet."
+    )
